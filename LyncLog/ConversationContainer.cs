@@ -1,4 +1,4 @@
-#region License, Terms and Author(s)
+﻿#region License, Terms and Author(s)
 //
 // Lynclog, raw logging for Lync and Skype for business conversations
 // Copyright (c) 2016 Philippe Raemy. All rights reserved.
@@ -21,30 +21,40 @@
 //
 #endregion
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Lync.Model.Conversation;
+using MoreLinq;
+
 namespace LyncLog
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Configuration;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Linq;
-    using System.Xml.Linq;
-    using Microsoft.Lync.Model.Conversation;
-    using MoreLinq;
 
     class ConversationContainer
     {
-        public Conversation Conversation     { get; set; }
-        public DateTime ConversationCreated  { get; set; }
+        public Conversation Conversation { get; set; }
+        public DateTime ConversationCreated { get; set; }
         DateTime ConversationLastTime { get; set; }
+        public ILogger<LyncLogService> Logger { get; }
+        public AppConfig AppConfig { get; }
 
         FileInfo _logFileInfo;
         FileInfo _nextLogFileInfo;
 
+        public ConversationContainer(ILogger<LyncLogService> logger,
+            AppConfig appConfig)
+        {
+            Logger = logger;
+            AppConfig = appConfig;
+        }
+
         void PropertiesChanged()
         {
-            var path = Path.Combine(ConfigurationManager.AppSettings["ConversationLog"],
+            var path = Path.Combine(AppConfig.ConversationLog,
                 new[]
                     {
                         $"{ConversationCreated:yyyyMMdd-HHmm}",
@@ -63,12 +73,18 @@ namespace LyncLog
             if (_logFileInfo != null)
             {
                 if (string.Equals(_nextLogFileInfo.FullName, _logFileInfo.FullName,
-                    StringComparison.InvariantCultureIgnoreCase)) return;
-                if(_logFileInfo.Exists) File.Move(_logFileInfo.FullName, _nextLogFileInfo.FullName);
+                    StringComparison.InvariantCultureIgnoreCase))
+                    return;
+                if (_logFileInfo.Exists)
+                    File.Move(_logFileInfo.FullName, _nextLogFileInfo.FullName);
                 Trace.WriteLine($"{_logFileInfo.FullName} has been renamed {_nextLogFileInfo.FullName}");
+                Logger.LogInformation($"{_logFileInfo.FullName} has been renamed {_nextLogFileInfo.FullName}");
             }
             _logFileInfo = _nextLogFileInfo;
-            _logFileInfo.Directory?.Create();
+            // This is throwing a null reference exception on _logFileInfo, 
+            // adding check (_logFileInfo.Directory => _logFileInfo?.Directory)
+            // but, need to investigate further
+            _logFileInfo?.Directory?.Create();
         }
 
         public void DumpConversation()
@@ -79,17 +95,22 @@ namespace LyncLog
         public void DumpConversation(DateTime fromDateTime)
         {
             var dump = DumpConversationImpl(fromDateTime)
-                .Pipe(d=> Trace.TraceInformation(d.ToString()))
+                .Pipe(d => Trace.TraceInformation(d.ToString()))
                 .ToArray();
             CommitFileName();
+
+            if (_logFileInfo == null)
+                return;
+            // This is throwing a null reference exception on _logFileInfo, 
+            // adding check above, need to investigate further
             using (var sr = File.AppendText(_logFileInfo.FullName))
             {
                 // sr.Write(_logFileInfo.Name);
                 // ReSharper disable once AccessToDisposedClosure
-                dump.Select(d=>d.ToShortString())
-                    .Where(d=>!string.IsNullOrWhiteSpace(d))
+                dump.Select(d => d.ToShortString())
+                    .Where(d => !string.IsNullOrWhiteSpace(d))
                     .Pipe(Console.WriteLine)
-                    .ForEach(d=>sr.WriteLine(d));
+                    .ForEach(d => sr.WriteLine(d));
             }
         }
 
@@ -156,9 +177,9 @@ namespace LyncLog
         }
 
         public static IEnumerable<string> ParticipantNames(this Conversation conversation)
-            => from   p    in conversation.Participants
-               from   prop in p.Properties
-               where  prop.Key.ToString() == "Name"
+            => from p in conversation.Participants
+               from prop in p.Properties
+               where prop.Key.ToString() == "Name"
                select prop.Value.ToString();
     }
 }

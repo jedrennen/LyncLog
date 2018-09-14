@@ -1,4 +1,4 @@
-#region License, Terms and Author(s)
+﻿#region License, Terms and Author(s)
 //
 // Lynclog, raw logging for Lync and Skype for business conversations
 // Copyright (c) 2016 Philippe Raemy. All rights reserved.
@@ -21,13 +21,14 @@
 //
 #endregion
 
+using System;
+using System.Windows.Forms;
+using System.Xml.Linq;
+using Microsoft.Lync.Model.Conversation;
+
+
 namespace LyncLog
 {
-    using System;
-    using System.Windows.Forms;
-    using System.Xml.Linq;
-    using Microsoft.Lync.Model.Conversation;
-
     class InstantMessage : ConversationItem
     {
         string _messageText;
@@ -53,7 +54,7 @@ namespace LyncLog
 
         public InstantMessage(Conversation conversation, XElement xel) : base(conversation, xel)
         {
-            Participant=new Participant(conversation, xel, GetAttributeValue(".", "displayName"));
+            Participant = new Participant(conversation, xel, GetAttributeValue(".", "displayName"));
             MessageText = GetText("messageInfo");
         }
 
@@ -64,7 +65,7 @@ namespace LyncLog
 
         public override string ToShortString()
         {
-            return string.IsNullOrWhiteSpace(MessageText) 
+            return string.IsNullOrWhiteSpace(MessageText)
                 ? null
                 : $"{Environment.NewLine}{ItemTimeStamp:yyyyMMdd-HH:mm:ss} {Participant.ToShortString().Replace(".", "").Replace(",", "")}:{Environment.NewLine}{MessageText}";
         }

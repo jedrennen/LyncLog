@@ -1,4 +1,4 @@
-#region License, Terms and Author(s)
+﻿#region License, Terms and Author(s)
 //
 // Lynclog, raw logging for Lync and Skype for business conversations
 // Copyright (c) 2016 Philippe Raemy. All rights reserved.
@@ -21,16 +21,17 @@
 //
 #endregion
 
+using System;
+using System.Linq;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
+using Microsoft.Lync.Model.Conversation;
+using MoreLinq;
+
+
 namespace LyncLog
 {
-    using System;
-    using System.Linq;
-    using System.Xml;
-    using System.Xml.Linq;
-    using System.Xml.XPath;
-    using Microsoft.Lync.Model.Conversation;
-    using MoreLinq;
-
     abstract class ConversationItem
     {
         Conversation Conversation { get; }
@@ -56,7 +57,7 @@ namespace LyncLog
         {
             return nodeName == "."
                 ? nodeName
-                : nodeName.Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries)
+                : nodeName.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(n => "ns:" + n)
                     .ToDelimitedString("/");
         }

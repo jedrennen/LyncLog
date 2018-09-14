@@ -23,15 +23,9 @@
 
 namespace LyncLog
 {
-    using System.Xml.Linq;
-    using Microsoft.Lync.Model.Conversation;
-
-    class SessionInvite : InstantMessage
+    public class AppConfig
     {
-        public SessionInvite(Conversation conversation, XElement xel) : base(conversation, xel)
-        {
-            Participant = new Participant(conversation, xel, GetAttributeValue("remoteParticipant/deviceInfo", "displayString"));
-            MessageText = GetText("inviteMessage");
-        }
+        public string ConversationLog { get; set; }
+        public string LogFolder { get; set; }
     }
 }
